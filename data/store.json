@@ -1,0 +1,25 @@
+{
+  "automation": {
+    "farm": true,
+    "farm_push": true,
+    "land_upgrade": true,
+    "friend": true,
+    "friend_steal": true,
+    "friend_help": true,
+    "friend_bad": true,
+    "task": true,
+    "sell": true,
+    "fertilizer": "normal"
+  },
+  "plantingStrategy": "preferred",
+  "preferredSeedId": 20002,
+  "intervals": {
+    "farm": 2,
+    "friend": 1800
+  },
+  "friendQuietHours": {
+    "enabled": true,
+    "start": "04:00",
+    "end": "13:00"
+  }
+}
