@@ -6,9 +6,9 @@ const { loadProto } = require('./proto');
 const { connect, reconnect, cleanup, getWs, getUserState, networkEvents } = require('./network');
 const { checkFarm, startFarmCheckLoop, stopFarmCheckLoop, refreshFarmCheckLoop, getLandsDetail, getAvailableSeeds, runFarmOperation } = require('./farm');
 const { checkFriends, startFriendCheckLoop, stopFriendCheckLoop, refreshFriendCheckLoop, getFriendsList, getFriendLandsDetail, doFriendOperation, getOperationLimits } = require('./friend');
-const { initTaskSystem, cleanupTaskSystem, checkAndClaimTasks, claimTaskReward } = require('./task');
+const { initTaskSystem, cleanupTaskSystem, checkAndClaimTasks } = require('./task');
 const { initStatusBar, cleanupStatusBar, setStatusPlatform, statusData } = require('./status');
-const { getOperations, recordGoldExp, getStats, setInitialValues, resetSessionGains, recordOperation } = require('./stats');
+const { recordGoldExp, getStats, setInitialValues, resetSessionGains, recordOperation } = require('./stats');
 const { sellAllFruits, debugSellFruits } = require('./warehouse');
 const { processInviteCodes } = require('./invite');
 const { setLogHook, log } = require('./utils');
@@ -59,9 +59,47 @@ let onSellGain = null;
 let onFarmHarvested = null;
 let harvestSellRunning = false;
 
+function normalizeIntervalRangeSec(minSec, maxSec, fallbackSec) {
+    const fallback = Math.max(1, parseInt(fallbackSec, 10) || 1);
+    let min = Math.max(1, parseInt(minSec, 10) || fallback);
+    let max = Math.max(1, parseInt(maxSec, 10) || fallback);
+    if (min > max) [min, max] = [max, min];
+    return { min, max };
+}
+
+function applyIntervalsToRuntime(intervals) {
+    const data = (intervals && typeof intervals === 'object') ? intervals : {};
+
+    const farmLegacy = Math.max(1, parseInt(data.farm, 10) || 2);
+    const farmRange = normalizeIntervalRangeSec(data.farmMin, data.farmMax, farmLegacy);
+    CONFIG.farmCheckIntervalMin = farmRange.min * 1000;
+    CONFIG.farmCheckIntervalMax = farmRange.max * 1000;
+    CONFIG.farmCheckInterval = CONFIG.farmCheckIntervalMin;
+
+    const friendLegacy = Math.max(1, parseInt(data.friend, 10) || 10);
+    const friendRange = normalizeIntervalRangeSec(data.friendMin, data.friendMax, friendLegacy);
+    CONFIG.friendCheckIntervalMin = friendRange.min * 1000;
+    CONFIG.friendCheckIntervalMax = friendRange.max * 1000;
+    CONFIG.friendCheckInterval = CONFIG.friendCheckIntervalMin;
+}
+
+function randomIntervalMs(minMs, maxMs) {
+    const minSec = Math.max(1, Math.floor(Math.max(1000, Number(minMs) || 1000) / 1000));
+    const maxSec = Math.max(minSec, Math.floor(Math.max(1000, Number(maxMs) || minSec * 1000) / 1000));
+    if (maxSec === minSec) return minSec * 1000;
+    const sec = minSec + Math.floor(Math.random() * (maxSec - minSec + 1));
+    return sec * 1000;
+}
+
 function resetUnifiedSchedule() {
-    const farmMs = Math.max(1000, Number(CONFIG.farmCheckInterval) || 2000);
-    const friendMs = Math.max(1000, Number(CONFIG.friendCheckInterval) || 10000);
+    const farmMs = randomIntervalMs(
+        CONFIG.farmCheckIntervalMin || CONFIG.farmCheckInterval || 2000,
+        CONFIG.farmCheckIntervalMax || CONFIG.farmCheckInterval || 2000
+    );
+    const friendMs = randomIntervalMs(
+        CONFIG.friendCheckIntervalMin || CONFIG.friendCheckInterval || 10000,
+        CONFIG.friendCheckIntervalMax || CONFIG.friendCheckInterval || 10000
+    );
     const now = Date.now();
     nextFarmRunAt = now + farmMs;
     nextFriendRunAt = now + friendMs;
@@ -77,8 +115,14 @@ async function runUnifiedTick() {
     unifiedTaskRunning = true;
     try {
         const auto = getAutomation();
-        const farmMs = Math.max(1000, Number(CONFIG.farmCheckInterval) || 2000);
-        const friendMs = Math.max(1000, Number(CONFIG.friendCheckInterval) || 10000);
+        const farmMs = randomIntervalMs(
+            CONFIG.farmCheckIntervalMin || CONFIG.farmCheckInterval || 2000,
+            CONFIG.farmCheckIntervalMax || CONFIG.farmCheckInterval || 2000
+        );
+        const friendMs = randomIntervalMs(
+            CONFIG.friendCheckIntervalMin || CONFIG.friendCheckInterval || 10000,
+            CONFIG.friendCheckIntervalMax || CONFIG.friendCheckInterval || 10000
+        );
 
         if (dueFarm) {
             if (auto.farm) await checkFarm();
@@ -97,21 +141,42 @@ async function runUnifiedTick() {
     }
 }
 
+function scheduleUnifiedNextTick() {
+    if (!unifiedSchedulerRunning) return;
+    if (unifiedSchedulerTimer) {
+        clearTimeout(unifiedSchedulerTimer);
+        unifiedSchedulerTimer = null;
+    }
+    if (!loginReady) return;
+
+    const now = Date.now();
+    const nextAt = Math.min(
+        Number(nextFarmRunAt) || (now + 1000),
+        Number(nextFriendRunAt) || (now + 1000)
+    );
+    const delayMs = Math.max(1000, nextAt - now); // 最低 1 秒
+
+    unifiedSchedulerTimer = setTimeout(async () => {
+        try {
+            await runUnifiedTick();
+        } finally {
+            scheduleUnifiedNextTick();
+        }
+    }, delayMs);
+}
+
 function startUnifiedScheduler() {
     if (unifiedSchedulerRunning) return;
     unifiedSchedulerRunning = true;
     resetUnifiedSchedule();
-    if (unifiedSchedulerTimer) clearInterval(unifiedSchedulerTimer);
-    unifiedSchedulerTimer = setInterval(() => {
-        runUnifiedTick();
-    }, 300);
+    scheduleUnifiedNextTick();
 }
 
 function stopUnifiedScheduler() {
     unifiedSchedulerRunning = false;
     unifiedTaskRunning = false;
     if (unifiedSchedulerTimer) {
-        clearInterval(unifiedSchedulerTimer);
+        clearTimeout(unifiedSchedulerTimer);
         unifiedSchedulerTimer = null;
     }
 }
@@ -125,17 +190,15 @@ function applyRuntimeConfig(snapshot, syncNow = false) {
     const incomingIntervals = (snapshot && snapshot.intervals && typeof snapshot.intervals === 'object')
         ? snapshot.intervals
         : null;
-    if (incomingIntervals && incomingIntervals.farm !== undefined) {
-        CONFIG.farmCheckInterval = Math.max(1, parseInt(incomingIntervals.farm, 10) || 2) * 1000;
-    }
-    if (incomingIntervals && incomingIntervals.friend !== undefined) {
-        CONFIG.friendCheckInterval = Math.max(1, parseInt(incomingIntervals.friend, 10) || 10) * 1000;
+    if (incomingIntervals) {
+        applyIntervalsToRuntime(incomingIntervals);
     }
 
     if (loginReady) {
         refreshFarmCheckLoop(200);
         refreshFriendCheckLoop(200);
         resetUnifiedSchedule();
+        scheduleUnifiedNextTick();
     }
 
     if (syncNow) syncStatus();
@@ -165,8 +228,16 @@ async function startBot(config) {
     const { code, platform, farmInterval, friendInterval } = config;
 
     CONFIG.platform = platform || 'qq';
-    if (farmInterval) CONFIG.farmCheckInterval = farmInterval;
-    if (friendInterval) CONFIG.friendCheckInterval = friendInterval;
+    if (farmInterval) {
+        CONFIG.farmCheckInterval = farmInterval;
+        CONFIG.farmCheckIntervalMin = farmInterval;
+        CONFIG.farmCheckIntervalMax = farmInterval;
+    }
+    if (friendInterval) {
+        CONFIG.friendCheckInterval = friendInterval;
+        CONFIG.friendCheckIntervalMin = friendInterval;
+        CONFIG.friendCheckIntervalMax = friendInterval;
+    }
 
     await loadProto();
     
@@ -302,10 +373,6 @@ async function handleApiCall(msg) {
                 result = getAutomation();
                 break;
             }
-            case 'setSeed':
-                applyRuntimeConfig({ preferredSeedId: (args && args[0] ? args[0] : {}).seedId }, true);
-                result = { preferredSeed: getPreferredSeed() };
-                break;
             case 'reconnect':
                 reconnect((args && args[0] ? args[0] : {}).code);
                 result = { ok: true };
@@ -316,29 +383,6 @@ async function handleApiCall(msg) {
             case 'getAnalytics': {
                 const { getPlantRankings } = require('./analytics');
                 result = getPlantRankings(args[0]); // sortBy
-                break;
-            }
-            case 'getIntervals':
-                result = require('./store').getIntervals();
-                break;
-            case 'getPlantingStrategy':
-                result = require('./store').getPlantingStrategy();
-                break;
-            case 'setIntervals': {
-                const payload = args && args[0] ? args[0] : {};
-                applyRuntimeConfig({ intervals: { [payload.type]: payload.value } }, true);
-                result = require('./store').getIntervals();
-                break;
-            }
-            case 'setPlantingStrategy': {
-                const strategy = (args && args[0] ? args[0] : {}).strategy;
-                applyRuntimeConfig({ plantingStrategy: strategy }, true);
-                result = { plantingStrategy: require('./store').getPlantingStrategy() };
-                break;
-            }
-            case 'setFriendQuietHours': {
-                applyRuntimeConfig({ friendQuietHours: (args && args[0] ? args[0] : {}) }, true);
-                result = { friendQuietHours: require('./store').getFriendQuietHours() };
                 break;
             }
             case 'debugSellFruits':

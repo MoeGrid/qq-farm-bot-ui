@@ -7,7 +7,7 @@ const { types } = require('./proto');
 const { sendMsgAsync, getUserState, networkEvents } = require('./network');
 const { toLong, toNum, getServerTimeSec, log, logWarn, sleep } = require('./utils');
 const { getCurrentPhase, setOperationLimitsCallback } = require('./farm');
-const { recordFriendCheck, recordOperation } = require('./stats');
+const { recordOperation } = require('./stats');
 const { isAutomationOn, getFriendQuietHours } = require('./store');
 const { getPlantName } = require('./gameConfig');
 
@@ -949,13 +949,6 @@ async function checkFriends() {
         if (summary.length > 0) {
             log('好友', `巡查 ${friendsToVisit.length} 人 → ${summary.join('/')}`, {
                 module: 'friend', event: 'friend_cycle', result: 'ok', visited: friendsToVisit.length, summary
-            });
-            recordFriendCheck({
-                visited: friendsToVisit.length,
-                steal: totalActions.steal,
-                weed: totalActions.weed,
-                bug: totalActions.bug,
-                water: totalActions.water,
             });
         }
         isFirstFriendCheck = false;

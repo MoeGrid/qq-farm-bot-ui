@@ -7,7 +7,7 @@ const { CONFIG, PlantPhase, PHASE_NAMES } = require('./config');
 const { types } = require('./proto');
 const { sendMsgAsync, getUserState, networkEvents } = require('./network');
 const { toLong, toNum, getServerTimeSec, toTimeSec, log, logWarn, sleep } = require('./utils');
-const { recordFarmCheck, recordOperation } = require('./stats');
+const { recordOperation } = require('./stats');
 const { getPlantNameBySeedId, getPlantName, getPlantExp, formatGrowTime, getPlantGrowTime, getAllSeeds } = require('./gameConfig');
 const { isAutomationOn, getPreferredSeed, getAutomation, getPlantingStrategy } = require('./store');
 
@@ -714,20 +714,7 @@ async function runFarmOperation(opType) {
     const lands = landsReply.lands;
     const status = analyzeLands(lands);
 
-    // 统计 & 摘要
-    recordFarmCheck({
-        harvestable: status.harvestable.length,
-        growing: status.growing.length,
-        needWater: status.needWater.length,
-        needWeed: status.needWeed.length,
-        needBug: status.needBug.length,
-        dead: status.dead.length,
-        empty: status.empty.length,
-        unlockable: status.unlockable.length,
-        upgradable: status.upgradable.length,
-        harvestableInfo: status.harvestableInfo,
-    });
-
+    // 摘要
     const statusParts = [];
     if (status.harvestable.length) statusParts.push(`收:${status.harvestable.length}`);
     if (status.needWeed.length) statusParts.push(`草:${status.needWeed.length}`);

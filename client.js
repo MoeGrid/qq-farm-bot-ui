@@ -333,37 +333,28 @@ const dataProvider = {
         broadcastConfigToWorkers();
         return { automation: store.getAutomation(), configRevision: rev };
     },
-    setSeed: async (accountId, seedId) => {
-        store.setPreferredSeed(seedId);
-        const rev = nextConfigRevision();
-        broadcastConfigToWorkers();
-        return { preferredSeed: store.getPreferredSeed(), configRevision: rev };
-    },
     reconnect: (accountId, code) => callWorkerApi(accountId, 'reconnect', { code }),
     
-    getTasks: (accountId) => callWorkerApi(accountId, 'getTasks'),
-    claimTask: (accountId, taskId) => callWorkerApi(accountId, 'claimTask', taskId),
     doFarmOp: (accountId, opType) => callWorkerApi(accountId, 'doFarmOp', opType),
     doAnalytics: (accountId, sortBy) => callWorkerApi(accountId, 'getAnalytics', sortBy),
-    setPlantingStrategy: async (accountId, strategy) => {
-        store.setPlantingStrategy(strategy);
+    saveSettings: async (accountId, payload) => {
+        const body = (payload && typeof payload === 'object') ? payload : {};
+        const snapshot = {
+            plantingStrategy: body.strategy,
+            preferredSeedId: body.seedId,
+            intervals: body.intervals,
+            friendQuietHours: body.friendQuietHours,
+        };
+        store.applyConfigSnapshot(snapshot);
         const rev = nextConfigRevision();
         broadcastConfigToWorkers();
-        return { plantingStrategy: store.getPlantingStrategy(), configRevision: rev };
-    },
-    setIntervals: async (accountId, type, value) => {
-        store.setIntervals(type, value);
-        const rev = nextConfigRevision();
-        broadcastConfigToWorkers();
-        return { intervals: store.getIntervals(), configRevision: rev };
-    },
-    getIntervals: (accountId) => callWorkerApi(accountId, 'getIntervals'),
-    getPlantingStrategy: (accountId) => callWorkerApi(accountId, 'getPlantingStrategy'),
-    setFriendQuietHours: async (accountId, cfg) => {
-        store.setFriendQuietHours(cfg || {});
-        const rev = nextConfigRevision();
-        broadcastConfigToWorkers();
-        return { friendQuietHours: store.getFriendQuietHours(), configRevision: rev };
+        return {
+            strategy: store.getPlantingStrategy(),
+            preferredSeed: store.getPreferredSeed(),
+            intervals: store.getIntervals(),
+            friendQuietHours: store.getFriendQuietHours(),
+            configRevision: rev,
+        };
     },
     setUITheme: async (theme) => {
         const snapshot = store.setUITheme(theme);

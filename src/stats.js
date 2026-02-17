@@ -3,9 +3,6 @@
  * 基于状态变化累加收益，而非依赖初始值快照
  */
 
-const logs = [];
-const LOG_LIMIT = 200;
-
 // 操作计数
 const operations = {
     harvest: 0,
@@ -48,25 +45,11 @@ function getOperations() {
     return { ...operations };
 }
 
-function addLog(tag, msg, isWarn = false) {
-    const time = new Date().toLocaleTimeString();
-    logs.push({ time, tag, msg, isWarn });
-    if (logs.length > LOG_LIMIT) logs.shift();
-    console.log(`[${time}] [${tag}] ${msg}`);
-}
-
-function getLogs(limit = 100, since = 0) {
-    return logs.slice(-limit);
-}
-
 function recordOperation(type, count = 1) {
     if (operations[type] !== undefined) {
         operations[type] += count;
     }
 }
-
-function recordFarmCheck(status) {}
-function recordFriendCheck(status) {}
 
 /**
  * 初始化状态 (登录时调用)
@@ -129,25 +112,6 @@ function setInitialValues(gold, exp) {
     initStats(gold, exp);
 }
 
-function addSessionGold(delta) {
-    const n = Number(delta);
-    if (!Number.isFinite(n)) return;
-    const d = Math.floor(n);
-    if (d <= 0) return;
-    session.goldGained += d;
-    session.lastGoldGain = d;
-}
-
-function addSessionExp(delta) {
-    const n = Number(delta);
-    if (!Number.isFinite(n)) return;
-    const d = Math.floor(n);
-    if (d <= 0) return;
-    session.expGained += d;
-    session.lastExpGain = d;
-    session.lastExpTime = Date.now();
-}
-
 function resetSessionGains() {
     session.goldGained = 0;
     session.expGained = 0;
@@ -203,26 +167,13 @@ function getStats(statusData, userState, connected, limits) {
     };
 }
 
-function resetStats(currentGold, currentExp) {
-    for (const k in operations) operations[k] = 0;
-    initStats(currentGold, currentExp);
-    resetSessionGains();
-}
-
 module.exports = {
-    addLog,
-    getLogs,
     recordOperation,
-    recordFarmCheck,
-    recordFriendCheck,
     initStats,
     updateStats,
     setInitialValues, // 兼容旧接口
     recordGoldExp,    // 兼容旧接口
-    addSessionGold,
-    addSessionExp,
     resetSessionGains,
     getStats,
-    resetStats,
     getOperations,
 };

@@ -8,8 +8,12 @@ const CONFIG = {
     platform: 'qq',              // 平台: qq 或 wx (可通过 --wx 切换为微信)
     os: 'iOS',
     heartbeatInterval: 25000,    // 心跳间隔 25秒
-    farmCheckInterval: 2000,    // 自己农场巡查完成后等待间隔 (可通过 --interval 修改, 最低1秒)
-    friendCheckInterval: 10000,   // 好友巡查完成后等待间隔 (可通过 --friend-interval 修改, 最低1秒)
+    farmCheckInterval: 2000,      // 兼容旧逻辑：自己农场固定巡查间隔(ms)
+    friendCheckInterval: 10000,   // 兼容旧逻辑：好友固定巡查间隔(ms)
+    farmCheckIntervalMin: 2000,   // 新逻辑：农场巡查间隔最小值(ms)
+    farmCheckIntervalMax: 2000,   // 新逻辑：农场巡查间隔最大值(ms)
+    friendCheckIntervalMin: 10000,// 新逻辑：好友巡查间隔最小值(ms)
+    friendCheckIntervalMax: 10000,// 新逻辑：好友巡查间隔最大值(ms)
     adminPort: 3000,             // 管理面板 HTTP 端口
     adminPassword: process.env.ADMIN_PASSWORD || 'admin',
 };

@@ -36,8 +36,8 @@
         <a href="#" class="nav-item" data-page="farm"><i class="fas fa-seedling"></i><span>农场</span></a>
         <a href="#" class="nav-item" data-page="bag"><i class="fas fa-box-open"></i><span>背包</span></a>
         <a href="#" class="nav-item" data-page="friends"><i class="fas fa-user-friends"></i><span>好友</span></a>
-        <a href="#" class="nav-item" data-page="analytics"><i class="fas fa-flask"></i><span>分析</span></a>
         <a href="#" class="nav-item" data-page="accounts"><i class="fas fa-users-cog"></i><span>账号</span></a>
+        <a href="#" class="nav-item" data-page="analytics"><i class="fas fa-flask"></i><span>分析</span></a>
         <a href="#" class="nav-item" data-page="settings"><i class="fas fa-sliders-h"></i><span>设置</span></a>
       </nav>
 
@@ -107,6 +107,7 @@
                     <option value="friend">好友</option>
                     <option value="warehouse">仓库</option>
                     <option value="task">任务</option>
+                    <option value="frontend">前端</option>
                   </select>
                   <select id="logs-event-filter" class="form-control log-filter-select">
                     <option value="">事件</option>
@@ -206,6 +207,7 @@
         <div id="page-friends" class="page">
           <div class="card">
             <div class="card-head"><h3><i class="fas fa-users"></i> 好友列表</h3></div>
+            <div id="friend-summary" class="summary">共 0 名好友</div>
             <div class="friends-list" id="friends-list"></div>
           </div>
         </div>
@@ -226,6 +228,7 @@
               <h3><i class="fas fa-user-circle"></i> 账号列表</h3>
               <button id="btn-add-acc-modal" class="btn btn-primary"><i class="fas fa-plus"></i> 添加账号</button>
             </div>
+            <div id="account-summary" class="summary">共 0 个账号</div>
             <div class="accounts-grid" id="accounts-list"></div>
           </div>
           <div class="card">
@@ -240,8 +243,10 @@
             <div class="settings-grid">
               <div class="form-group"><label>种植策略</label><select id="strategy-select" class="form-control"><option value="preferred">优先种植种子 (下方选择)</option><option value="level">最高等级作物</option></select></div>
               <div class="form-group"><label>优先种植种子</label><select id="seed-select" class="form-control"><option value="0">自动选择</option></select></div>
-              <div class="form-group"><label>农场巡查间隔 (秒)</label><input id="interval-farm" class="form-control" type="number" min="1" value="2"></div>
-              <div class="form-group"><label>好友巡查间隔 (秒)</label><input id="interval-friend" class="form-control" type="number" min="1" value="10"></div>
+              <div class="form-group"><label>农场巡查间隔最小值 (秒)</label><input id="interval-farm-min" class="form-control" type="number" min="1" value="2"></div>
+              <div class="form-group"><label>农场巡查间隔最大值 (秒)</label><input id="interval-farm-max" class="form-control" type="number" min="1" value="2"></div>
+              <div class="form-group"><label>好友巡查间隔最小值 (秒)</label><input id="interval-friend-min" class="form-control" type="number" min="1" value="10"></div>
+              <div class="form-group"><label>好友巡查间隔最大值 (秒)</label><input id="interval-friend-max" class="form-control" type="number" min="1" value="10"></div>
               <div class="form-group full"><label class="checkbox-inline"><input type="checkbox" id="friend-quiet-enabled"> 启用好友互动静默时段</label></div>
               <div class="form-group"><label>静默开始时间</label><input id="friend-quiet-start" class="form-control" type="time" value="23:00"></div>
               <div class="form-group"><label>静默结束时间</label><input id="friend-quiet-end" class="form-control" type="time" value="07:00"></div>
@@ -281,6 +286,10 @@
     </div>
   </div>
 
-  <script src="app.js?v=2026021770"></script>
+  <script src="js/core.js?v=2026021782"></script>
+  <script src="js/polling-accounts.js?v=2026021782"></script>
+  <script src="js/pages.js?v=2026021782"></script>
+  <script src="js/modal-accounts.js?v=2026021782"></script>
+  <script src="js/init.js?v=2026021782"></script>
 </body>
 </html>

@@ -88,11 +88,6 @@ function startAdminServer(dataProvider) {
         }
     });
 
-    // API: 自动化开关
-    app.get('/api/automation', (req, res) => {
-        // Status already includes automation config
-        res.json({ ok: true, data: {} });
-    });
     app.post('/api/automation', async (req, res) => {
         const id = getAccId(req);
         if (!id) return res.status(400).json({ ok: false });
@@ -192,17 +187,6 @@ function startAdminServer(dataProvider) {
         }
     });
 
-    // API: 设置偏好种子
-    app.post('/api/seed', async (req, res) => {
-        const id = getAccId(req);
-        try {
-            const data = await provider.setSeed(id, req.body.seedId);
-            res.json({ ok: true, data: data || {} });
-        } catch (e) {
-            res.status(500).json({ ok: false, error: e.message });
-        }
-    });
-
     // API: 启动账号
     app.post('/api/accounts/:id/start', (req, res) => {
         try {
@@ -248,33 +232,11 @@ function startAdminServer(dataProvider) {
         }
     });
 
-    // API: 设置策略
-    app.post('/api/settings/strategy', async (req, res) => {
+    // API: 设置页统一保存（单次写入+单次广播）
+    app.post('/api/settings/save', async (req, res) => {
         const id = getAccId(req);
         try {
-            const data = await provider.setPlantingStrategy(id, req.body.strategy);
-            res.json({ ok: true, data: data || {} });
-        } catch (e) {
-            res.status(500).json({ ok: false, error: e.message });
-        }
-    });
-
-    // API: 设置间隔
-    app.post('/api/settings/interval', async (req, res) => {
-        const id = getAccId(req);
-        try {
-            const data = await provider.setIntervals(id, req.body.type, req.body.value);
-            res.json({ ok: true, data: data || {} });
-        } catch (e) {
-            res.status(500).json({ ok: false, error: e.message });
-        }
-    });
-
-    // API: 设置好友互动静默时段
-    app.post('/api/settings/friend-time', async (req, res) => {
-        const id = getAccId(req);
-        try {
-            const data = await provider.setFriendQuietHours(id, req.body || {});
+            const data = await provider.saveSettings(id, req.body || {});
             res.json({ ok: true, data: data || {} });
         } catch (e) {
             res.status(500).json({ ok: false, error: e.message });

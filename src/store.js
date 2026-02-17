@@ -34,6 +34,10 @@ let globalConfig = {
     intervals: {
         farm: 2,   // 秒
         friend: 10, // 秒
+        farmMin: 2,   // 秒
+        farmMax: 2,   // 秒
+        friendMin: 10, // 秒
+        friendMax: 10, // 秒
     },
     // 好友互动静默时段（在该时间段内不执行好友互动）
     friendQuietHours: {
@@ -55,6 +59,7 @@ function loadGlobalConfig() {
             // 深度合并
             globalConfig.automation = { ...globalConfig.automation, ...data.automation };
             globalConfig.intervals = { ...globalConfig.intervals, ...data.intervals };
+            globalConfig.intervals = normalizeIntervals(globalConfig.intervals);
             globalConfig.friendQuietHours = { ...globalConfig.friendQuietHours, ...data.friendQuietHours };
             globalConfig.ui = { ...globalConfig.ui, ...data.ui };
             if (data.plantingStrategy && ['preferred', 'level'].includes(String(data.plantingStrategy))) {
@@ -127,6 +132,7 @@ function applyConfigSnapshot(snapshot, options = {}) {
             if (globalConfig.intervals[type] === undefined) continue;
             globalConfig.intervals[type] = Math.max(1, parseInt(sec) || 60);
         }
+        globalConfig.intervals = normalizeIntervals(globalConfig.intervals);
     }
 
     if (cfg.friendQuietHours && typeof cfg.friendQuietHours === 'object') {
@@ -169,8 +175,29 @@ function setPlantingStrategy(strategy) {
 
 function getIntervals() { return { ...globalConfig.intervals }; }
 
-function setIntervals(type, seconds) {
-    return applyConfigSnapshot({ intervals: { [type]: seconds } });
+function normalizeIntervals(intervals) {
+    const src = (intervals && typeof intervals === 'object') ? intervals : {};
+    const toSec = (v, d) => Math.max(1, parseInt(v, 10) || d);
+    const farm = toSec(src.farm, 2);
+    const friend = toSec(src.friend, 10);
+
+    let farmMin = toSec(src.farmMin, farm);
+    let farmMax = toSec(src.farmMax, farm);
+    if (farmMin > farmMax) [farmMin, farmMax] = [farmMax, farmMin];
+
+    let friendMin = toSec(src.friendMin, friend);
+    let friendMax = toSec(src.friendMax, friend);
+    if (friendMin > friendMax) [friendMin, friendMax] = [friendMax, friendMin];
+
+    return {
+        ...src,
+        farm,
+        friend,
+        farmMin,
+        farmMax,
+        friendMin,
+        friendMax,
+    };
 }
 
 function normalizeTimeString(v, fallback) {
@@ -277,7 +304,6 @@ module.exports = {
     getPlantingStrategy,
     setPlantingStrategy,
     getIntervals,
-    setIntervals,
     getFriendQuietHours,
     setFriendQuietHours,
     getUI,
