@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useIntervalFn } from '@vueuse/core'
+import QRCode from 'qrcode'
 import { computed, reactive, ref, watch } from 'vue'
 import api from '@/api'
 import BaseButton from '@/components/ui/BaseButton.vue'
@@ -84,7 +85,15 @@ async function loadQRCode() {
   try {
     const res = await api.post('/api/qr/create')
     if (res.data.ok) {
-      qrData.value = res.data.data
+      const image = await QRCode.toDataURL(res.data.data.url, {
+        width: 300,
+        margin: 1,
+        errorCorrectionLevel: 'M',
+      })
+      qrData.value = {
+        image,
+        ...res.data.data,
+      }
       qrStatus.value = '请使用手机QQ扫码'
       startQRCheck()
     }
@@ -254,7 +263,7 @@ watch(() => props.show, (newVal) => {
           </div>
 
           <div v-if="qrData && (qrData.image || qrData.qrcode)" class="border rounded bg-white p-2">
-            <img :src="qrData.image ? (qrData.image.startsWith('data:') ? qrData.image : `data:image/png;base64,${qrData.image}`) : qrData.qrcode" class="h-48 w-48">
+            <img :src="qrData.image" class="h-48 w-48">
           </div>
           <div v-else class="h-48 w-48 flex items-center justify-center rounded bg-gray-100 text-gray-400 dark:bg-gray-700">
             <div v-if="loading" i-svg-spinners-90-ring-with-bg class="text-3xl" />

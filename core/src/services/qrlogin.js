@@ -3,7 +3,6 @@ const { Buffer } = require('node:buffer');
  * QR Code Login Module - 从 QRLib 集成
  */
 const axios = require('axios');
-const QRCode = require('qrcode');
 const { CookieUtils, HashUtils } = require('../utils/qrutils');
 
 const ChromeUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
@@ -159,16 +158,9 @@ class MiniProgramLoginSession {
 
             const loginCode = data.code || '';
             const loginUrl = `https://h5.qzone.qq.com/qqq/code/${loginCode}?_proxy=1&from=ide`;
-            const image = await QRCode.toDataURL(loginUrl, {
-                width: 300,
-                margin: 1,
-                errorCorrectionLevel: 'M',
-            });
-
             return {
                 code: loginCode,
                 url: loginUrl,
-                image,
             };
         } catch (error) {
             console.error('MP Request Login Code Error:', error.message);
